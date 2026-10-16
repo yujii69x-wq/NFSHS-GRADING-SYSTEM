@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PR2 Grading System - Update Grades</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+</head>
+
+<body class="bg-slate-950 min-h-screen text-slate-100 font-sans antialiased">
+  
+  <nav class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+    <div class="flex items-center space-x-4">
+      <a href="teacher.html" class="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+      </a>
+      <h1 class="text-xl font-bold tracking-tight">Update Existing Grades</h1>
+    </div>
+    <button onclick="logout()" class="flex items-center gap-2 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 px-4 py-2 rounded-xl text-sm font-semibold transition">
+      <i data-lucide="log-out" class="w-4 h-4"></i> Log Out
+    </button>
+  </nav>
+  
+  <div class="max-w-2xl mx-auto p-6 animate__animated animate__fadeIn">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 backdrop-blur-xl shadow-2xl">
+      <form id="updateForm" class="space-y-5">
+        
+        <!-- Select Semester -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Semester</label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="cursor-pointer">
+              <input type="radio" name="semester" value="1" checked onchange="onSemesterChange()" class="peer hidden">
+              <div class="text-center px-4 py-3 rounded-xl border border-slate-800 bg-slate-950/80 text-slate-400 font-semibold text-sm transition peer-checked:bg-amber-600/20 peer-checked:border-amber-500 peer-checked:text-amber-300">
+                1st Semester
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="semester" value="2" onchange="onSemesterChange()" class="peer hidden">
+              <div class="text-center px-4 py-3 rounded-xl border border-slate-800 bg-slate-950/80 text-slate-400 font-semibold text-sm transition peer-checked:bg-amber-600/20 peer-checked:border-amber-500 peer-checked:text-amber-300">
+                2nd Semester
+              </div>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Select Section Dropdown -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Select Section</label>
+          <select id="sectionSelect" required onchange="filterStudentsBySection()" class="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition text-slate-100">
+            <option value="">-- Load sections first --</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Select Student</label>
+          <select id="studentSelect" onchange="fetchExistingGrade()" required class="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition text-slate-100">
+            <option value="">-- Select section first --</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Subject</label>
+          <select id="subject" onchange="fetchExistingGrade()" required class="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition text-slate-100">
+            <option value="Practical Research 2">Practical Research 2</option>
+            <option value="Computer Programming">Computer Programming</option>
+            <option value="HOPE">HOPE</option>
+            <option value="Piling Larang">Piling Larang</option>
+          </select>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label id="labelQa" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Quarter 1 Grade</label>
+            <input type="number" id="qa" min="60" max="100" required placeholder="85" class="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition text-slate-100 placeholder-slate-600">
+          </div>
+          <div>
+            <label id="labelQb" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Quarter 2 Grade</label>
+            <input type="number" id="qb" min="60" max="100" required placeholder="88" class="w-full px-4 py-3 bg-slate-950/60 border border-slate-800 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition text-slate-100 placeholder-slate-600">
+          </div>
+        </div>
+        
+        <div id="statusMessage" class="text-xs font-medium min-h-[20px]"></div>
+        
+        <button type="submit" class="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-amber-900/40 transform hover:-translate-y-0.5 transition duration-200 flex items-center justify-center gap-2">
+          <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+          <span>Update Grade Record</span>
+        </button>
+      </form>
+    </div>
+  </div>
+  
+  <script>
+    lucide.createIcons();
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyCpqbqUXrxADXC5xptI91dCy3H8PlZo7u8",
+      authDomain: "gradingsystem-6fbdb.firebaseapp.com",
+      databaseURL: "https://gradingsystem-6fbdb-default-rtdb.firebaseio.com",
+      projectId: "gradingsystem-6fbdb",
+      storageBucket: "gradingsystem-6fbdb.firebasestorage.app",
+      messagingSenderId: "919646538223",
+      appId: "1:919646538223:web:0e427c6ecbf1d7500cce1a",
+      measurementId: "G-H8DCQTXKXW"
+    };
+    
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    
+    let allStudents = [];
+    
+    function getSemester() {
+      return parseInt(document.querySelector('input[name="semester"]:checked').value, 10);
+    }
+    
+    // Doc ID: 1st sem = dating format, 2nd sem may "_S2" (tugma sa encode.html)
+    function getDocId(studentUid, subject, semester) {
+      return semester === 1 ?
+        `${studentUid}_${subject}` :
+        `${studentUid}_${subject}_S2`;
+    }
+    
+    function updateQuarterLabels() {
+      const sem = getSemester();
+      document.getElementById('labelQa').textContent = sem === 1 ? 'Quarter 1 Grade' : 'Quarter 3 Grade';
+      document.getElementById('labelQb').textContent = sem === 1 ? 'Quarter 2 Grade' : 'Quarter 4 Grade';
+    }
+    
+    function onSemesterChange() {
+      updateQuarterLabels();
+      fetchExistingGrade();
+    }
+    
+    auth.onAuthStateChanged(user => {
+      if (!user) window.location.href = 'index.html';
+      else fetchStudentsAndSections();
+    });
+    
+    async function fetchStudentsAndSections() {
+      const sectionSelect = document.getElementById('sectionSelect');
+      
+      try {
+        const snapshot = await db.collection('users').where('role', '==', 'student').get();
+        allStudents = [];
+        const sectionsSet = new Set();
+        
+        snapshot.forEach(doc => {
+          const studentData = doc.data();
+          const section = studentData.section || 'No Section';
+          sectionsSet.add(section);
+          allStudents.push({
+            id: doc.id,
+            fullName: studentData.fullName,
+            section: section
+          });
+        });
+        
+        // Populahin ang section dropdown
+        sectionSelect.innerHTML = '<option value="">-- Select Section --</option>';
+        Array.from(sectionsSet).sort().forEach(sec => {
+          const opt = document.createElement('option');
+          opt.value = sec;
+          opt.textContent = sec;
+          sectionSelect.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Error fetching roster: ", err);
+      }
+    }
+    
+    function filterStudentsBySection() {
+      const selectedSection = document.getElementById('sectionSelect').value;
+      const studentSelect = document.getElementById('studentSelect');
+      const msg = document.getElementById('statusMessage');
+      
+      studentSelect.innerHTML = '<option value="">-- Select Student --</option>';
+      document.getElementById('qa').value = '';
+      document.getElementById('qb').value = '';
+      msg.textContent = '';
+      
+      if (!selectedSection) {
+        studentSelect.innerHTML = '<option value="">-- Select section first --</option>';
+        return;
+      }
+      
+      const filtered = allStudents.filter(s => s.section === selectedSection);
+      filtered.sort((a, b) => a.fullName.localeCompare(b.fullName));
+      
+      filtered.forEach(student => {
+        const option = document.createElement('option');
+        option.value = student.id;
+        option.textContent = student.fullName;
+        studentSelect.appendChild(option);
+      });
+    }
+    
+    async function fetchExistingGrade() {
+      const studentUid = document.getElementById('studentSelect').value;
+      const subject = document.getElementById('subject').value;
+      const semester = getSemester();
+      const msg = document.getElementById('statusMessage');
+      const semLabel = semester === 1 ? '1st' : '2nd';
+      
+      if (!studentUid || !subject) return;
+      
+      try {
+        const doc = await db.collection('grades').doc(getDocId(studentUid, subject, semester)).get();
+        
+        if (doc.exists) {
+          const data = doc.data();
+          const a = semester === 1 ? data.q1 : data.q3;
+          const b = semester === 1 ? data.q2 : data.q4;
+          document.getElementById('qa').value = a !== undefined ? a : '';
+          document.getElementById('qb').value = b !== undefined ? b : '';
+          msg.textContent = `Existing ${semLabel} Semester record retrieved. Ready to edit.`;
+          msg.className = 'text-xs font-semibold text-emerald-400';
+        } else {
+          document.getElementById('qa').value = '';
+          document.getElementById('qb').value = '';
+          msg.textContent = `No ${semLabel} Semester grade record found for this subject.`;
+          msg.className = 'text-xs font-semibold text-amber-400';
+        }
+      } catch (err) {
+        console.error(err);
+        msg.textContent = 'Error retrieving grade: ' + err.message;
+        msg.className = 'text-xs font-semibold text-rose-400';
+      }
+    }
+    
+    document.getElementById('updateForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const studentUid = document.getElementById('studentSelect').value;
+      const subject = document.getElementById('subject').value;
+      const semester = getSemester();
+      const qa = parseFloat(document.getElementById('qa').value);
+      const qb = parseFloat(document.getElementById('qb').value);
+      const finalGrade = (qa + qb) / 2;
+      
+      if (!studentUid) {
+        alert('Please select a student first.');
+        return;
+      }
+      
+      // 1st sem: q1,q2  |  2nd sem: q3,q4
+      const gradeData = {
+        studentUid,
+        subject,
+        semester,
+        finalGrade,
+        updatedAt: new Date().toISOString()
+      };
+      if (semester === 1) {
+        gradeData.q1 = qa;
+        gradeData.q2 = qb;
+      } else {
+        gradeData.q3 = qa;
+        gradeData.q4 = qb;
+      }
+      
+      try {
+        await db.collection('grades').doc(getDocId(studentUid, subject, semester)).set(gradeData, { merge: true });
+        
+        alert(`${semester === 1 ? '1st' : '2nd'} Semester grade successfully updated!`);
+      } catch (err) {
+        alert('Update error: ' + err.message);
+      }
+    });
+    
+    function logout() {
+      auth.signOut().then(() => window.location.href = 'index.html');
+    }
+  </script>
+</body>
+
+</html>

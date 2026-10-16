@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PR2 Grading System - Student Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body, div, card, table, th, td, input, button {
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100 font-sans antialiased">
+
+  <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+    <div class="flex items-center space-x-3">
+      <div class="p-2 bg-blue-600/10 dark:bg-blue-600/20 border border-blue-500/30 rounded-xl">
+        <i data-lucide="award" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+      </div>
+      <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">Student Performance Portal</h1>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Dark/Light Mode Moon/Sun Toggle Button -->
+      <button onclick="toggleTheme()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-amber-400 hover:scale-105 shadow-inner transition flex items-center justify-center" title="Toggle Dark/Light Mode">
+        <i id="themeIcon" data-lucide="moon" class="w-5 h-5"></i>
+      </button>
+
+      <button onclick="logout()" class="flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-300 px-4 py-2 rounded-xl text-sm font-semibold transition">
+        <i data-lucide="log-out" class="w-4 h-4"></i> Log Out
+      </button>
+    </div>
+  </nav>
+
+  <!-- ================= SECTION, STUDENT SELECTOR & SEARCH BAR ================= -->
+  <div id="selectionView" class="max-w-2xl mx-auto p-6 mt-10 animate__animated animate__fadeInUp">
+    <div class="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 backdrop-blur-xl shadow-xl dark:shadow-2xl space-y-6">
+      <div class="text-center space-y-2">
+        <h2 class="text-2xl font-extrabold text-slate-900 dark:text-slate-100">Student Portal Login</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Select or search your strand/section and student name.</p>
+      </div>
+
+      <!-- Step 1: Select Section with Search/Filter -->
+      <div id="stepSection" class="space-y-3">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">1. Select Section</label>
+        
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
+          <input type="text" id="sectionSearchInput" onkeyup="filterSections()" placeholder="Search strand or section..." class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 transition">
+        </div>
+
+        <div id="sectionListContainer" class="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-1">
+          <p class="text-center text-slate-400 py-4 text-sm"><i data-lucide="loader-2" class="w-4 h-4 animate-spin inline mr-1 text-blue-500"></i> Loading sections...</p>
+        </div>
+      </div>
+
+      <!-- Step 2: Select Student Name with Search/Filter -->
+      <div id="stepStudent" class="space-y-3 hidden animate__animated animate__fadeIn">
+        <div class="flex justify-between items-center">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">2. Select Student Name</label>
+          <button onclick="backToSections()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">← Back to Sections</button>
+        </div>
+
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
+          <input type="text" id="studentSearchInput" onkeyup="filterStudents()" placeholder="Search name or LRN..." class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 transition">
+        </div>
+
+        <div class="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-950/40 shadow-md">
+          <div class="px-5 py-3.5 bg-slate-100 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex justify-between items-center">
+            <span>Student Dashboard</span>
+            <span class="text-[10px] text-slate-400 font-mono"></span>
+          </div>
+          <div class="overflow-x-auto max-h-80">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 text-xs font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <th class="p-4 w-3/5">Student Name</th>
+                  <th class="p-4 w-2/5">LRN</th>
+                </tr>
+              </thead>
+              <tbody id="studentListContainer" class="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-slate-700 dark:text-slate-300">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Enter Password -->
+      <div id="stepPassword" class="space-y-4 hidden animate__animated animate__fadeIn">
+        <div class="flex justify-between items-center">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">3. Enter Password for <span id="selectedStudentNameLabel" class="text-blue-600 dark:text-blue-400 font-bold"></span></label>
+          <button onclick="backToStudents()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">← Back to Student List</button>
+        </div>
+        <div class="space-y-3">
+          <div class="relative">
+            <input type="password" id="studentPasswordInput" placeholder="Enter account password..." class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl pl-4 pr-12 py-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 transition">
+            
+            <!-- Show/Hide Password Button -->
+            <button type="button" onclick="togglePasswordVisibility('studentPasswordInput', 'toggleStudentPasswordIcon')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none transition">
+              <i id="toggleStudentPasswordIcon" data-lucide="eye" class="w-5 h-5"></i>
+            </button>
+          </div>
+          
+          <p id="loginErrorMsg" class="text-xs text-rose-500 dark:text-rose-400 hidden"></p>
+          <button onclick="verifyStudentPassword()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl text-sm transition shadow-lg shadow-blue-600/20 hover:scale-[1.01] active:scale-[0.99]">
+            Access Portal
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ================= END OF SELECTION VIEW ================= -->
+
+
+  <!-- ================= GRADES DASHBOARD VIEW ================= -->
+  <div id="gradesDashboardView" class="max-w-4xl mx-auto p-6 space-y-6 animate__animated animate__fadeIn hidden">
+    
+    <div class="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <h2 class="text-2xl font-extrabold text-slate-900 dark:text-slate-100" id="studentName">Loading Profile...</h2>
+        <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex flex-wrap gap-4">
+          <p class="flex items-center gap-1"><i data-lucide="id-card" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i> <strong>LRN:</strong> <span id="studentId" class="font-mono">-</span></p>
+          <p class="flex items-center gap-1"><i data-lucide="book" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i> <strong>Section:</strong> <span id="studentSection">-</span></p>
+          <p class="flex items-center gap-1"><i data-lucide="graduation-cap" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i> <strong>Grade 12</strong></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORT CARD: 1st & 2nd Semester cards are generated here -->
+    <div id="semestersContainer" class="space-y-6">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-2xl text-center text-slate-400">
+        <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600 dark:text-blue-500"></i>
+        Retrieving report card...
+      </div>
+    </div>
+
+    <!-- OVERALL AVERAGE (shows only when both semesters have grades) -->
+    <div id="overallCard" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl px-6 py-5 shadow-xl flex justify-between items-center">
+      <span class="uppercase text-xs font-bold tracking-wider text-slate-600 dark:text-slate-400">Overall Average (1st &amp; 2nd Sem)</span>
+      <span id="overallAverage" class="text-xl font-extrabold text-blue-600 dark:text-blue-400">-</span>
+    </div>
+
+    <!-- BACK TO SECTIONS BUTTON -->
+    <div class="flex justify-center pt-2">
+      <button onclick="backToSectionSelectionFromDashboard()" class="flex items-center gap-2 bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-5 py-2.5 rounded-2xl text-xs font-bold tracking-wide uppercase transition shadow-md hover:scale-105 active:scale-95">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Section Selection
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Dark/Light Mode Switcher Logic
+    function toggleTheme() {
+      const html = document.documentElement;
+      const themeIcon = document.getElementById('themeIcon');
+      
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        html.classList.add('light');
+        themeIcon.setAttribute('data-lucide', 'moon');
+        localStorage.setItem('theme', 'light');
+      } else {
+        html.classList.remove('light');
+        html.classList.add('dark');
+        themeIcon.setAttribute('data-lucide', 'sun');
+        localStorage.setItem('theme', 'dark');
+      }
+      lucide.createIcons();
+    }
+
+    // Function para sa Show/Hide Password
+    function togglePasswordVisibility(fieldId, iconId) {
+      const inputField = document.getElementById(fieldId);
+      const toggleIcon = document.getElementById(iconId);
+
+      if (inputField.type === 'password') {
+        inputField.type = 'text';
+        toggleIcon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        inputField.type = 'password';
+        toggleIcon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      const html = document.documentElement;
+      const themeIcon = document.getElementById('themeIcon');
+      
+      if (savedTheme === 'dark') {
+        html.classList.remove('light');
+        html.classList.add('dark');
+        themeIcon.setAttribute('data-lucide', 'sun');
+      } else {
+        html.classList.remove('dark');
+        html.classList.add('light');
+        themeIcon.setAttribute('data-lucide', 'moon');
+      }
+      lucide.createIcons();
+      loadSections();
+    });
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCpqbqUXrxADXC5xptI91dCy3H8PlZo7u8",
+      authDomain: "gradingsystem-6fbdb.firebaseapp.com",
+      databaseURL: "https://gradingsystem-6fbdb-default-rtdb.firebaseio.com",
+      projectId: "gradingsystem-6fbdb",
+      storageBucket: "gradingsystem-6fbdb.firebasestorage.app",
+      messagingSenderId: "919646538223",
+      appId: "1:919646538223:web:0e427c6ecbf1d7500cce1a",
+      measurementId: "G-H8DCQTXKXW"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const rtdb = firebase.database();
+
+    let selectedStudentData = null;
+    let allSectionsList = [];
+    let allStudentsList = [];
+
+    const sectionMapping = {
+      "EINSTEIN": "STEM A",
+      "NEWTON": "STEM B",
+      "SHAKESPEARE": "HUMSS",
+      "KELLER": "FBS",
+      "BILLGATES": "ICT",
+      "DA VINCI": "GAS",
+      "ROCKEFELLER": "ABM"
+    };
+
+    async function loadSections() {
+      const sectionsMap = new Map();
+      Object.keys(sectionMapping).forEach(section => {
+        sectionsMap.set(section, sectionMapping[section]);
+      });
+
+      try {
+        const snapshot = await db.collection('users').where('role', '==', 'student').get();
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.section) {
+            const secUpper = data.section.toUpperCase();
+            if (!sectionsMap.has(secUpper)) {
+              sectionsMap.set(secUpper, "OTHER STRAND");
+            }
+          }
+        });
+
+        allSectionsList = Array.from(sectionsMap.entries()).map(([section, strand]) => ({ section, strand }));
+        renderSections(allSectionsList);
+      } catch (error) {
+        console.error("Error loading sections:", error);
+        allSectionsList = Array.from(sectionsMap.entries()).map(([section, strand]) => ({ section, strand }));
+        renderSections(allSectionsList);
+      }
+    }
+
+    function renderSections(sections) {
+      const container = document.getElementById('sectionListContainer');
+      container.innerHTML = '';
+
+      if (sections.length === 0) {
+        container.innerHTML = `<p class="text-center text-slate-400 py-4 text-sm">No sections found.</p>`;
+        return;
+      }
+
+      sections.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = "w-full text-left bg-slate-50 dark:bg-slate-950/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 p-4 rounded-xl transition flex flex-col gap-0.5 shadow-sm";
+        btn.innerHTML = `
+          <div class="font-bold text-slate-900 dark:text-slate-100 text-base">${item.section}</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400">Strand: ${item.strand}</div>
+        `;
+        btn.onclick = () => selectSection(item.section);
+        container.appendChild(btn);
+      });
+    }
+
+    function filterSections() {
+      const query = document.getElementById('sectionSearchInput').value.toLowerCase();
+      const filtered = allSectionsList.filter(item => 
+        item.section.toLowerCase().includes(query) || item.strand.toLowerCase().includes(query)
+      );
+      renderSections(filtered);
+    }
+
+    async function selectSection(sectionName) {
+      document.getElementById('stepSection').classList.add('hidden');
+      document.getElementById('stepStudent').classList.remove('hidden');
+      document.getElementById('studentSearchInput').value = '';
+
+      const container = document.getElementById('studentListContainer');
+      container.innerHTML = `<tr><td colspan="2" class="p-8 text-center text-slate-400"><i data-lucide="loader-2" class="w-5 h-5 animate-spin inline mr-1 text-blue-500"></i> Loading students...</td></tr>`;
+
+      try {
+        const snapshot = await db.collection('users').where('role', '==', 'student').where('section', '==', sectionName).get();
+        allStudentsList = [];
+
+        snapshot.forEach(doc => {
+          allStudentsList.push({ uid: doc.id, ...doc.data() });
+        });
+
+        renderStudents(allStudentsList);
+      } catch (error) {
+        console.error("Error loading students:", error);
+        renderStudents([]);
+      }
+    }
+
+    function renderStudents(students) {
+      const container = document.getElementById('studentListContainer');
+      container.innerHTML = '';
+
+      if (students.length === 0) {
+        container.innerHTML = `<tr><td colspan="2" class="p-8 text-center text-slate-400">No students registered in this section yet.</td></tr>`;
+        return;
+      }
+
+      students.forEach(student => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer transition";
+        tr.innerHTML = `
+          <td class="p-4 font-bold text-slate-900 dark:text-slate-100 text-sm">${student.fullName || 'No Name'}</td>
+          <td class="p-4 text-xs font-mono text-slate-500 dark:text-slate-400">LRN: ${student.studentId || 'N/A'}</td>
+        `;
+        tr.onclick = () => selectStudent(student);
+        container.appendChild(tr);
+      });
+    }
+
+    function filterStudents() {
+      const query = document.getElementById('studentSearchInput').value.toLowerCase();
+      const filtered = allStudentsList.filter(student => {
+        const name = (student.fullName || '').toLowerCase();
+        const lrn = (student.studentId || '').toLowerCase();
+        return name.includes(query) || lrn.includes(query);
+      });
+      renderStudents(filtered);
+    }
+
+    function selectStudent(student) {
+      selectedStudentData = student;
+      document.getElementById('stepStudent').classList.add('hidden');
+      document.getElementById('stepPassword').classList.remove('hidden');
+      document.getElementById('selectedStudentNameLabel').textContent = student.fullName;
+      document.getElementById('studentPasswordInput').value = '';
+      document.getElementById('loginErrorMsg').classList.add('hidden');
+    }
+
+    function backToSections() {
+      document.getElementById('stepStudent').classList.add('hidden');
+      document.getElementById('stepSection').classList.remove('hidden');
+    }
+
+    function backToStudents() {
+      document.getElementById('stepPassword').classList.add('hidden');
+      document.getElementById('stepStudent').classList.remove('hidden');
+    }
+
+    // Function para bumalik sa section selection mula sa grades dashboard view
+    function backToSectionSelectionFromDashboard() {
+      document.getElementById('gradesDashboardView').classList.add('hidden');
+      document.getElementById('selectionView').classList.remove('hidden');
+      document.getElementById('stepPassword').classList.add('hidden');
+      document.getElementById('stepStudent').classList.add('hidden');
+      document.getElementById('stepSection').classList.remove('hidden');
+      document.getElementById('sectionSearchInput').value = '';
+      loadSections();
+    }
+
+    async function verifyStudentPassword() {
+      const passwordInput = document.getElementById('studentPasswordInput').value;
+      const errorMsg = document.getElementById('loginErrorMsg');
+
+      if (!passwordInput) {
+        errorMsg.textContent = "Please enter your password.";
+        errorMsg.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        await auth.signInWithEmailAndPassword(selectedStudentData.email, passwordInput);
+        
+        document.getElementById('selectionView').classList.add('hidden');
+        document.getElementById('gradesDashboardView').classList.remove('hidden');
+
+        setupDashboardAndGrades(selectedStudentData.uid);
+
+      } catch (error) {
+        console.error("Login failed:", error);
+        errorMsg.textContent = "Incorrect password. Please try again.";
+        errorMsg.classList.remove('hidden');
+      }
+    }
+
+    async function setupDashboardAndGrades(uid) {
+      const user = auth.currentUser;
+      if (user) {
+        const userStatusRef = rtdb.ref('/users/' + user.uid + '/status');
+        rtdb.ref('.info/connected').on('value', (snapshot) => {
+          if (snapshot.val() === false) return;
+          userStatusRef.onDisconnect().set('Offline').then(() => {
+            userStatusRef.set('Online');
+          });
+        });
+      }
+
+      const userDoc = await db.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        const data = userDoc.data();
+        document.getElementById('studentName').textContent = data.fullName;
+        document.getElementById('studentId').textContent = data.studentId || 'N/A';
+        document.getElementById('studentSection').textContent = data.section || 'N/A';
+      }
+
+      loadStudentGrades(uid);
+    }
+
+    const SEM_CONFIG = {
+      1: { title: "1st Semester", quarters: ["1", "2"], label: "First Semester Final Grade" },
+      2: { title: "2nd Semester", quarters: ["3", "4"], label: "Second Semester Final Grade" }
+    };
+
+    function numOrNull(v) {
+      const n = parseFloat(v);
+      return isNaN(n) ? null : n;
+    }
+
+    function fmtQ(v) {
+      return (v === undefined || v === null || v === '') ? '-' : v;
+    }
+
+    function buildSemesterCard(semNum, rows) {
+      const cfg = SEM_CONFIG[semNum];
+
+      let total = 0, count = 0;
+      const bodyHtml = rows.length === 0
+        ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">No grades recorded yet.</td></tr>`
+        : rows.map(r => {
+            if (r.final !== null) { total += r.final; count++; }
+            return `
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                <td class="p-4 font-semibold text-slate-800 dark:text-slate-200 border-r border-slate-200 dark:border-slate-800">${r.subject}</td>
+                <td class="p-4 text-center border-r border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">${fmtQ(r.qa)}</td>
+                <td class="p-4 text-center border-r border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">${fmtQ(r.qb)}</td>
+                <td class="p-4 font-bold text-slate-900 dark:text-slate-100 text-center">${r.final !== null ? r.final.toFixed(2) : '-'}</td>
+              </tr>`;
+          }).join('');
+
+      const avg = count > 0 ? total / count : null;
+
+      const card = document.createElement('div');
+      card.className = "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl animate__animated animate__zoomIn";
+      card.innerHTML = `
+        <div class="flex items-center gap-2 mb-4">
+          <span class="px-3 py-1 rounded-full bg-blue-600/10 dark:bg-blue-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider">${cfg.title}</span>
+        </div>
+        <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 text-xs font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 text-center">
+                <th rowspan="2" class="p-4 text-left border-r border-slate-200 dark:border-slate-800 w-2/5">Subjects</th>
+                <th colspan="2" class="p-2 border-r border-slate-200 dark:border-slate-800">Quarter</th>
+                <th rowspan="2" class="p-4 w-1/5">${cfg.label}</th>
+              </tr>
+              <tr class="bg-slate-50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 text-xs font-semibold border-b border-slate-200 dark:border-slate-800 text-center">
+                <th class="p-2 border-r border-slate-200 dark:border-slate-800 w-16">${cfg.quarters[0]}</th>
+                <th class="p-2 border-r border-slate-200 dark:border-slate-800 w-16">${cfg.quarters[1]}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-slate-800 dark:text-slate-300">
+              ${bodyHtml}
+            </tbody>
+            <tfoot>
+              <tr class="bg-slate-100 dark:bg-slate-800/50 font-bold text-slate-900 dark:text-slate-100 border-t border-slate-200 dark:border-slate-800">
+                <td colspan="3" class="p-4 text-right uppercase text-xs tracking-wider text-slate-600 dark:text-slate-400">General Average for the Semester:</td>
+                <td class="p-4 text-blue-600 dark:text-blue-400 text-base font-extrabold text-center">${avg !== null ? avg.toFixed(2) : '-'}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      `;
+
+      return { card, avg };
+    }
+
+    async function loadStudentGrades(uid) {
+      const container = document.getElementById('semestersContainer');
+      const overallCard = document.getElementById('overallCard');
+      overallCard.classList.add('hidden');
+
+      try {
+        const snapshot = await db.collection('grades').where('studentUid', '==', uid).get();
+        container.innerHTML = '';
+
+        if (snapshot.empty) {
+          container.innerHTML = `
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl text-center text-slate-400">
+              No grades recorded yet.
+            </div>`;
+          return;
+        }
+
+        const sems = { 1: [], 2: [] };
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const sem = Number(data.semester) === 2 ? 2 : 1;
+
+          let qa, qb;
+          if (sem === 1) {
+            qa = data.q1; qb = data.q2;
+          } else {
+            qa = data.q3 !== undefined ? data.q3 : data.q1;
+            qb = data.q4 !== undefined ? data.q4 : data.q2;
+          }
+
+          let final = numOrNull(data.finalGrade);
+          if (final === null) {
+            const a = numOrNull(qa), b = numOrNull(qb);
+            if (a !== null && b !== null) final = (a + b) / 2;
+          }
+
+          sems[sem].push({ subject: data.subject, qa, qb, final });
+        });
+
+        const avgs = [];
+        [1, 2].forEach(n => {
+          const { card, avg } = buildSemesterCard(n, sems[n]);
+          container.appendChild(card);
+          if (avg !== null) avgs.push(avg);
+        });
+
+        if (avgs.length === 2) {
+          document.getElementById('overallAverage').textContent = ((avgs[0] + avgs[1]) / 2).toFixed(2);
+          overallCard.classList.remove('hidden');
+        }
+
+        lucide.createIcons();
+      } catch (error) {
+        console.error("Error loading grades:", error);
+        container.innerHTML = `
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl text-center text-rose-500">
+            Failed to load grades. Please try again.
+          </div>`;
+      }
+    }
+
+    function logout() {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        rtdb.ref('/users/' + currentUser.uid + '/status').set('Offline').finally(() => {
+          window.location.href = 'index.html';
+        });
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+  </script>
+</body>
+</html>

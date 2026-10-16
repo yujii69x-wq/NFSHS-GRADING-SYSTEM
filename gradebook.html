@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PR2 Grading System - Master Gradebook</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+</head>
+<body class="bg-slate-950 min-h-screen text-slate-100 font-sans antialiased">
+
+  <nav class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+    <div class="flex items-center space-x-4">
+      <a href="teacher.html" class="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+      </a>
+      <h1 class="text-xl font-bold tracking-tight">Master Gradebook</h1>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="grader.html" class="flex items-center gap-1.5 bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/30 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition">
+        <i data-lucide="bar-chart-2" class="w-4 h-4"></i> View Analytics
+      </a>
+      <button onclick="logout()" class="flex items-center gap-2 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 px-4 py-2 rounded-xl text-sm font-semibold transition">
+        <i data-lucide="log-out" class="w-4 h-4"></i> Log Out
+      </button>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-6 animate__animated animate__fadeIn">
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl shadow-2xl">
+
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-purple-400"></i> Recorded Performance Ledger
+        </h2>
+        <div class="text-xs text-slate-400">
+  <span id="rowCount">0</span> rows
+</div>
+
+      </div>
+
+      <!-- Filters -->
+      <div class="flex flex-col lg:flex-row gap-3 mb-4">
+        <div class="relative flex-1">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"></i>
+          <input type="text" id="searchInput" oninput="renderGradebook()" placeholder="Search student or subject..."
+            class="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-sm text-slate-100 placeholder-slate-500">
+        </div>
+
+        <select id="sectionFilter" onchange="renderGradebook()"
+          class="px-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-sm text-slate-100">
+          <option value="all">All Sections</option>
+        </select>
+
+        <div id="semFilter" class="flex gap-2">
+          <button data-sem="all" onclick="setSemFilter('all')" class="sem-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition">All</button>
+          <button data-sem="1" onclick="setSemFilter('1')" class="sem-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition">1st Sem</button>
+          <button data-sem="2" onclick="setSemFilter('2')" class="sem-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition">2nd Sem</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-800">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-800/60 text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
+              <th class="p-4">Student Name</th>
+              <th class="p-4">Section</th>
+              <th class="p-4">Subject</th>
+              <th class="p-4">Semester</th>
+              <th class="p-4">Quarters</th>
+              <th class="p-4">Final Grade</th>
+              <th class="p-4">Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="gradebookBody" class="divide-y divide-slate-800 text-sm text-slate-300">
+            <tr>
+              <td colspan="7" class="p-8 text-center text-slate-500">
+                <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-purple-500"></i>
+                Loading gradebook entries...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCpqbqUXrxADXC5xptI91dCy3H8PlZo7u8",
+      authDomain: "gradingsystem-6fbdb.firebaseapp.com",
+      databaseURL: "https://gradingsystem-6fbdb-default-rtdb.firebaseio.com",
+      projectId: "gradingsystem-6fbdb",
+      storageBucket: "gradingsystem-6fbdb.firebasestorage.app",
+      messagingSenderId: "919646538223",
+      appId: "1:919646538223:web:0e427c6ecbf1d7500cce1a",
+      measurementId: "G-H8DCQTXKXW"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let studentsMap = {};      // uid -> { fullName, section }
+    let gradeDocs = [];        // lahat ng docs sa 'grades'
+    let usersLoaded = false;
+    let gradesLoaded = false;
+    let currentSemFilter = 'all';
+    let unsubUsers = null;
+    let unsubGrades = null;
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'index.html';
+      } else if (!unsubUsers && !unsubGrades) {
+        startListeners();
+      }
+    });
+
+    function fmt(v) {
+      return (v === undefined || v === null || v === '') ? '-' : v;
+    }
+
+    function setSemFilter(sem) {
+      currentSemFilter = sem;
+      renderGradebook();
+    }
+
+    function updateFilterButtons() {
+      document.querySelectorAll('.sem-btn').forEach(btn => {
+        const active = btn.dataset.sem === currentSemFilter;
+        btn.className = 'sem-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition ' +
+          (active
+            ? 'bg-purple-600/30 border-purple-500 text-purple-200'
+            : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:text-white');
+      });
+    }
+
+    function showError(message) {
+      document.getElementById('gradebookBody').innerHTML =
+        `<tr><td colspan="7" class="p-6 text-center text-rose-400">${message}</td></tr>`;
+    }
+
+    // REALTIME: kusang mag-a-update kapag may bagong student o bagong grade
+    function startListeners() {
+      unsubUsers = db.collection('users')
+        .where('role', '==', 'student')
+        .onSnapshot(snapshot => {
+          studentsMap = {};
+          snapshot.forEach(doc => {
+            const d = doc.data();
+            studentsMap[doc.id] = {
+              fullName: d.fullName || 'No Name',
+              section: d.section || '-'
+            };
+          });
+          usersLoaded = true;
+          populateSectionFilter();
+          renderGradebook();
+        }, err => {
+          console.error('Users listener error:', err);
+          showError('Failed to load students: ' + err.message);
+        });
+
+      unsubGrades = db.collection('grades')
+        .onSnapshot(snapshot => {
+          gradeDocs = [];
+          snapshot.forEach(doc => gradeDocs.push({ id: doc.id, ...doc.data() }));
+          gradesLoaded = true;
+          renderGradebook();
+        }, err => {
+          console.error('Grades listener error:', err);
+          showError('Failed to load grades: ' + err.message);
+        });
+    }
+
+    function populateSectionFilter() {
+      const select = document.getElementById('sectionFilter');
+      const previous = select.value;
+      const sections = new Set();
+      Object.values(studentsMap).forEach(s => { if (s.section && s.section !== '-') sections.add(s.section); });
+
+      select.innerHTML = '<option value="all">All Sections</option>';
+      Array.from(sections).sort().forEach(sec => {
+        const opt = document.createElement('option');
+        opt.value = sec;
+        opt.textContent = sec;
+        select.appendChild(opt);
+      });
+
+      // Ibalik ang dating napili kung nandoon pa
+      if (previous && Array.from(select.options).some(o => o.value === previous)) {
+        select.value = previous;
+      }
+    }
+
+    function buildRows() {
+      const rows = [];
+      const studentsWithGrades = new Set();
+
+      gradeDocs.forEach(data => {
+        const semester = Number(data.semester) === 2 ? 2 : 1;
+        const qa = semester === 1 ? data.q1 : (data.q3 !== undefined ? data.q3 : data.q1);
+        const qb = semester === 1 ? data.q2 : (data.q4 !== undefined ? data.q4 : data.q2);
+
+        let finalGrade = parseFloat(data.finalGrade);
+        if (isNaN(finalGrade)) {
+          const a = parseFloat(qa), b = parseFloat(qb);
+          finalGrade = (!isNaN(a) && !isNaN(b)) ? (a + b) / 2 : null;
+        }
+
+        const student = studentsMap[data.studentUid];
+        studentsWithGrades.add(data.studentUid);
+
+        rows.push({
+          studentName: student ? student.fullName : 'Unknown Student',
+          section: student ? student.section : '-',
+          subject: data.subject || '-',
+          semester,
+          qa,
+          qb,
+          finalGrade,
+          noGrade: false
+        });
+      });
+
+      // Isama ang mga student na wala pang grade para makita agad ang bagong register
+      Object.keys(studentsMap).forEach(uid => {
+        if (!studentsWithGrades.has(uid)) {
+          rows.push({
+            studentName: studentsMap[uid].fullName,
+            section: studentsMap[uid].section,
+            subject: '-',
+            semester: 0,
+            qa: undefined,
+            qb: undefined,
+            finalGrade: null,
+            noGrade: true
+          });
+        }
+      });
+
+      rows.sort((x, y) =>
+        x.studentName.localeCompare(y.studentName) ||
+        String(x.subject).localeCompare(String(y.subject)) ||
+        x.semester - y.semester
+      );
+
+      return rows;
+    }
+
+    function renderGradebook() {
+      updateFilterButtons();
+      if (!usersLoaded || !gradesLoaded) return;
+
+      const tbody = document.getElementById('gradebookBody');
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const sectionFilter = document.getElementById('sectionFilter').value;
+
+      let rows = buildRows();
+
+      rows = rows.filter(r => {
+        if (sectionFilter !== 'all' && r.section !== sectionFilter) return false;
+        if (currentSemFilter !== 'all') {
+          if (r.noGrade) return false;
+          if (String(r.semester) !== currentSemFilter) return false;
+        }
+        if (query) {
+          const text = `${r.studentName} ${r.subject}`.toLowerCase();
+          if (!text.includes(query)) return false;
+        }
+        return true;
+      });
+
+      document.getElementById('rowCount').textContent = rows.length;
+      tbody.innerHTML = '';
+
+      if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500">No records found.</td></tr>`;
+        return;
+      }
+
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+
+        if (r.noGrade) {
+          tr.innerHTML = `
+            <td class="p-4 font-semibold text-slate-100">${r.studentName}</td>
+            <td class="p-4">${r.section}</td>
+            <td class="p-4 text-slate-500" colspan="5">No grades yet</td>
+          `;
+          tbody.appendChild(tr);
+          return;
+        }
+
+        const isPassed = r.finalGrade !== null && r.finalGrade >= 75;
+        const qLabels = r.semester === 1 ? ['Q1', 'Q2'] : ['Q3', 'Q4'];
+
+        tr.innerHTML = `
+          <td class="p-4 font-semibold text-slate-100">${r.studentName}</td>
+          <td class="p-4">${r.section}</td>
+          <td class="p-4">${r.subject}</td>
+          <td class="p-4">
+            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/30">
+              ${r.semester === 1 ? '1st Sem' : '2nd Sem'}
+            </span>
+          </td>
+          <td class="p-4 text-slate-400">
+            <span class="text-xs text-slate-500">${qLabels[0]}:</span> <span class="text-slate-200">${fmt(r.qa)}</span>
+            <span class="mx-1.5 text-slate-700">|</span>
+            <span class="text-xs text-slate-500">${qLabels[1]}:</span> <span class="text-slate-200">${fmt(r.qb)}</span>
+          </td>
+          <td class="p-4 font-bold text-slate-100">${r.finalGrade !== null ? r.finalGrade.toFixed(2) : '-'}</td>
+          <td class="p-4">
+            <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${isPassed ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'}">
+              ${isPassed ? 'Passed' : 'Failed'}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function logout() {
+      if (unsubUsers) unsubUsers();
+      if (unsubGrades) unsubGrades();
+      auth.signOut().then(() => window.location.href = 'index.html');
+    }
+  </script>
+</body>
+</html>

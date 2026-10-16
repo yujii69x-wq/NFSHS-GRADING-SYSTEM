@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PR2 Grading System - Admin Control Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-row {
+      animation: fadeInUp 0.3s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-300">
+
+  <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50 transition-all">
+    <div class="flex items-center space-x-3">
+      <div class="p-2 bg-indigo-500/10 dark:bg-indigo-600/20 border border-indigo-500/30 rounded-xl shadow-inner">
+        <i data-lucide="shield-check" class="w-6 h-6 text-indigo-600 dark:text-indigo-400"></i>
+      </div>
+      <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">System Admin Panel</h1>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <!-- Dark/Light Mode Toggle Button -->
+      <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition transform active:scale-95 shadow-sm" title="Toggle Theme">
+        <i data-lucide="moon" class="w-4 h-4 hidden dark:block"></i>
+        <i data-lucide="sun" class="w-4 h-4 block dark:hidden text-amber-500"></i>
+      </button>
+
+      <button onclick="logout()" class="flex items-center gap-2 bg-rose-600/10 hover:bg-rose-600/20 border border-rose-500/30 text-rose-600 dark:text-rose-300 px-4 py-2 rounded-xl text-sm font-semibold transition transform active:scale-95 shadow-sm">
+        <i data-lucide="log-out" class="w-4 h-4"></i> Log Out
+      </button>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-6 animate__animated animate__fadeIn">
+    <div class="bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 backdrop-blur-xl shadow-xl dark:shadow-2xl transition-colors">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <i data-lucide="users" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i> User Directory & Realtime Status
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage accounts, active sessions, and security access</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+              <th class="p-4">Status</th>
+              <th class="p-4">Full Name</th>
+              <th class="p-4">Role</th>
+              <th class="p-4">ID / LRN</th>
+              <th class="p-4">Email</th>
+              <th class="p-4">Section</th>
+              <th class="p-4 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody" class="divide-y divide-slate-200 dark:divide-slate-800 text-sm text-slate-700 dark:text-slate-300">
+            <tr>
+              <td colspan="7" class="p-8 text-center text-slate-500">
+                <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600 dark:text-indigo-500"></i>
+                Fetching user database...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Theme Toggle Functionality
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      if (htmlEl.classList.contains('dark')) {
+        htmlEl.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        htmlEl.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    // Load saved theme preference
+    if (localStorage.getItem('theme') === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCpqbqUXrxADXC5xptI91dCy3H8PlZo7u8",
+      authDomain: "gradingsystem-6fbdb.firebaseapp.com",
+      databaseURL: "https://gradingsystem-6fbdb-default-rtdb.firebaseio.com",
+      projectId: "gradingsystem-6fbdb",
+      storageBucket: "gradingsystem-6fbdb.firebasestorage.app",
+      messagingSenderId: "919646538223",
+      appId: "1:919646538223:web:0e427c6ecbf1d7500cce1a",
+      measurementId: "G-H8DCQTXKXW"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const rtdb = firebase.database();
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // --- ADMIN ONLINE STATUS TRACKING ---
+      const adminStatusRef = rtdb.ref('/users/' + user.uid + '/status');
+      rtdb.ref('.info/connected').on('value', (snapshot) => {
+        if (snapshot.val() === false) return;
+        adminStatusRef.onDisconnect().set('Offline').then(() => {
+          adminStatusRef.set('Online');
+        });
+      });
+
+      loadUsers();
+    });
+
+    function loadUsers() {
+      db.collection('users').onSnapshot(snapshot => {
+        const tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = '';
+
+        if (snapshot.empty) {
+          tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500">No users found.</td></tr>`;
+          return;
+        }
+
+        snapshot.forEach(doc => {
+          const userData = doc.data();
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-colors animate-row";
+
+          const isBlocked = userData.isBlocked === true;
+          const blockButtonText = isBlocked ? 'Unblock' : 'Block';
+          const blockBtnClass = isBlocked 
+            ? 'bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400' 
+            : 'bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400';
+
+          tr.innerHTML = `
+            <td class="p-4"><span id="status-${userData.uid}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 transition-all"><span class="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500"></span> Offline</span></td>
+            <td class="p-4 font-semibold text-slate-900 dark:text-slate-100">
+              ${userData.fullName || 'N/A'}
+              ${isBlocked ? '<span class="ml-2 px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse">Blocked</span>' : ''}
+            </td>
+            <td class="p-4 capitalize"><span class="px-2 py-0.5 rounded-md text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">${userData.role || 'N/A'}</span></td>
+            <td class="p-4">${userData.studentId || '-'}</td>
+            <td class="p-4 text-slate-500 dark:text-slate-400">${userData.email}</td>
+            <td class="p-4">${userData.section || '-'}</td>
+            <td class="p-4 text-center space-x-2">
+              <button onclick="toggleBlockUser('${doc.id}', ${isBlocked})" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition transform active:scale-95 ${blockBtnClass}">
+                <i data-lucide="${isBlocked ? 'unlock' : 'lock'}" class="w-3.5 h-3.5"></i> ${blockButtonText}
+              </button>
+              <button onclick="deleteUser('${doc.id}')" class="inline-flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 px-3 py-1.5 rounded-lg text-xs font-semibold transition transform active:scale-95">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+
+          rtdb.ref('/users/' + userData.uid + '/status').on('value', snapshot => {
+            const statusEl = document.getElementById(`status-${userData.uid}`);
+            if (statusEl) {
+              const currentStatus = snapshot.val();
+              const isOnline = (currentStatus === 'Online');
+              
+              statusEl.innerHTML = isOnline 
+                ? `<span class="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span> Online` 
+                : `<span class="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500"></span> Offline`;
+              statusEl.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${isOnline ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-sm shadow-emerald-500/10' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'}`;
+            }
+          });
+        });
+        lucide.createIcons();
+      });
+    }
+
+    async function toggleBlockUser(docId, currentBlockedStatus) {
+      const actionName = currentBlockedStatus ? 'unblock' : 'block';
+      if (confirm(`Are you sure you want to ${actionName} this user account?`)) {
+        try {
+          await db.collection('users').doc(docId).update({
+            isBlocked: !currentBlockedStatus,
+            loginAttempts: 0
+          });
+          alert(`User successfully ${actionName}ed.`);
+        } catch (err) {
+          alert('Error updating block status: ' + err.message);
+        }
+      }
+    }
+
+    async function deleteUser(uid) {
+      if (confirm('Are you sure you want to remove this user account?')) {
+        try {
+          await db.collection('users').doc(uid).delete();
+          alert('User successfully deleted.');
+        } catch (err) {
+          alert('Deletion error: ' + err.message);
+        }
+      }
+    }
+
+    function logout() {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        rtdb.ref('/users/' + currentUser.uid + '/status').set('Offline').finally(() => {
+          window.location.href = 'index.html';
+        });
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PR2 Grading System - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- EmailJS SDK -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script type="text/javascript">
+     (function(){
+        emailjs.init("UYowREjZtrL9Z41CY");
+     })();
+  </script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body, div, form, input, button, h1, p {
+      transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+
+    /* Universe Mode Background Canvas Styling */
+    #spaceCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      display: none;
+    }
+    .universe-mode #spaceCanvas {
+      display: block;
+    }
+    .universe-mode {
+      background: radial-gradient(ellipse at bottom, #0d1b2a 0%, #000814 100%);
+    }
+
+    /* NFSHS Interactive Hover Text Animation (Mas malaki at Khaki color) */
+    .nfhs-title {
+      font-size: clamp(2.4rem, 5vw, 3.8rem);
+      font-weight: 800;
+      cursor: pointer;
+      position: relative;
+      margin: 0;
+      letter-spacing: -0.03em;
+      -webkit-font-smoothing: antialiased;
+      display: inline-flex;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .nfhs-title span {
+      display: inline-block;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                  color 0.35s ease, 
+                  text-shadow 0.35s ease;
+    }
+
+    .nfhs-title span:hover, .nfhs-title span:active {
+      transform: scale(1.22) translateY(-10px);
+      color: #f0e68c; /* Khaki color */
+      text-shadow: 0 0 28px rgba(240, 230, 140, 0.8);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4 antialiased text-slate-800 relative">
+
+  <!-- HTML5 Canvas for Glowing & Moving Stars -->
+  <canvas id="spaceCanvas"></canvas>
+
+  <!-- THEME TOGGLE BUTTON (LIGHT <-> UNIVERSE) -->
+  <div class="absolute top-6 right-6 z-50">
+    <button onclick="toggleTheme()" class="p-3 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:scale-110 shadow-lg transition flex items-center justify-center" title="Toggle Theme (Light / Universe)">
+      <i id="themeIcon" data-lucide="moon" class="w-5 h-5"></i>
+    </button>
+  </div>
+
+  <div id="mainCard" class="animate__animated animate__fadeInDown bg-white border border-slate-200 p-8 rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden backdrop-blur-xl z-10">
+    <div class="absolute -top-12 -right-12 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
+    <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl"></div>
+
+    <div class="text-center mb-6 relative z-10">
+      <!-- NFSHS Header with Animated Spans -->
+      <h2 class="nfhs-title text-slate-900" id="nfhsHeader">
+        <span>N</span><span>F</span><span>S</span><span>H</span><span>S</span>
+      </h2>
+      <h1 id="appTitle" class="text-2xl font-extrabold tracking-tight text-slate-900 mt-1">Grading System</h1>
+      <p id="subTitle" class="text-xs text-slate-500 mt-1">Sign in to access your dashboard</p>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" class="space-y-5 relative z-10">
+      <div>
+        <label id="labelEmail" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Email Address</label>
+        <div class="relative">
+          <i data-lucide="user" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input type="text" id="loginInput" required placeholder="Abdullah@gmail.com"
+            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-slate-900 placeholder-slate-400">
+        </div>
+      </div>
+
+      <div>
+        <label id="labelPassword" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Password</label>
+        <div class="relative">
+          <i data-lucide="lock" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input type="password" id="password" required placeholder="••••••••"
+            class="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-slate-900 placeholder-slate-400">
+          
+          <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none transition">
+            <i id="togglePasswordIcon" data-lucide="eye" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl shadow-lg shadow-blue-600/20 transform hover:-translate-y-0.5 active:translate-y-0 transition duration-200 flex items-center justify-center gap-2">
+        <span>Sign In</span>
+        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      </button>
+    </form>
+
+    <!-- OTP Verification Form (Hidden by default) -->
+    <form id="otpForm" class="space-y-5 relative z-10 hidden animate__animated animate__fadeIn">
+      <div class="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl text-center">
+        <p class="text-xs text-blue-600">Security Verification: Please enter the 6-digit OTP sent to your email.</p>
+        <p id="otpDisplayEmail" class="text-xs font-semibold text-amber-500 mt-1"></p>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Enter 6-Digit OTP Code</label>
+        <div class="relative">
+          <i data-lucide="key" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input type="text" id="otpInput" required maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="Enter code"
+            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition text-slate-900 placeholder-slate-400 font-mono tracking-widest text-center text-lg">
+        </div>
+        <p id="attemptWarning" class="text-xs text-rose-500 mt-2 font-medium text-center min-h-[16px]"></p>
+      </div>
+
+      <button type="submit" id="verifyOtpBtn" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 rounded-xl shadow-lg shadow-amber-600/20 transition flex items-center justify-center gap-2">
+        <span>Verify OTP</span>
+        <i data-lucide="check-circle" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Resend Code Button -->
+      <button type="button" id="resendBtn" onclick="resendLoginOtp()" class="w-full bg-slate-500/10 hover:bg-slate-500/20 border border-slate-500/30 text-slate-500 font-semibold py-2.5 rounded-xl text-xs transition disabled:opacity-50 disabled:cursor-not-allowed">
+        Resend code
+      </button>
+    </form>
+
+    <div id="registerPrompt" class="mt-6 text-center text-sm text-slate-500 relative z-10">
+      Don't have an account? <a href="register.html" class="text-blue-600 font-semibold hover:underline underline-offset-4 transition">Register here</a>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Canvas Star Animation Script
+    const canvas = document.getElementById('spaceCanvas');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+    let animationId;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function initStars() {
+      stars = [];
+      const numStars = Math.floor((canvas.width * canvas.height) / 1500);
+      for (let i = 0; i < numStars; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 1.8 + 0.5,
+          color: Math.random() > 0.3 ? '#ffffff' : (Math.random() > 0.5 ? '#87ceeb' : '#fffaed'),
+          alpha: Math.random(),
+          speed: Math.random() * 0.3 + 0.1,
+          twinkleSpeed: Math.random() * 0.02 + 0.005
+        });
+      }
+    }
+    initStars();
+
+    function animateStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      stars.forEach(star => {
+        star.y -= star.speed;
+        if (star.y < 0) {
+          star.y = canvas.height;
+          star.x = Math.random() * canvas.width;
+        }
+
+        star.alpha += star.twinkleSpeed;
+        if (star.alpha > 1 || star.alpha < 0.2) {
+          star.twinkleSpeed = -star.twinkleSpeed;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = star.alpha;
+        ctx.fillStyle = star.color;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = star.color;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      animationId = requestAnimationFrame(animateStars);
+    }
+
+    // Apply Theme (Light vs Universe)
+    function applyTheme(theme) {
+      const themeIcon = document.getElementById('themeIcon');
+      const mainCard = document.getElementById('mainCard');
+      const nfhsHeader = document.getElementById('nfhsHeader');
+      const appTitle = document.getElementById('appTitle');
+      const subTitle = document.getElementById('subTitle');
+      const labelEmail = document.getElementById('labelEmail');
+      const labelPassword = document.getElementById('labelPassword');
+      const loginInput = document.getElementById('loginInput');
+      const passwordInput = document.getElementById('password');
+      const registerPrompt = document.getElementById('registerPrompt');
+
+      if (theme === 'universe') {
+        document.body.className = "bg-slate-950 min-h-screen flex items-center justify-center p-4 antialiased text-slate-100 relative universe-mode";
+        
+        mainCard.className = "animate__animated animate__fadeInDown bg-slate-900/80 border border-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden backdrop-blur-xl z-10";
+        nfhsHeader.className = "nfhs-title text-white";
+        appTitle.className = "text-2xl font-extrabold tracking-tight text-white mt-1";
+        subTitle.className = "text-xs text-slate-400 mt-1";
+        labelEmail.className = "block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2";
+        labelPassword.className = "block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2";
+        
+        loginInput.className = "w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-700/60 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-slate-100 placeholder-slate-400";
+        passwordInput.className = "w-full pl-10 pr-12 py-3 bg-slate-950/50 border border-slate-700/60 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-slate-100 placeholder-slate-400";
+        registerPrompt.className = "mt-6 text-center text-sm text-slate-400 relative z-10";
+
+        resizeCanvas();
+        initStars();
+        animateStars();
+        themeIcon.setAttribute('data-lucide', 'sparkles');
+      } else {
+        document.body.className = "bg-slate-100 min-h-screen flex items-center justify-center p-4 antialiased text-slate-800 relative";
+        
+        mainCard.className = "animate__animated animate__fadeInDown bg-white border border-slate-200 p-8 rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden backdrop-blur-xl z-10";
+        nfhsHeader.className = "nfhs-title text-slate-900";
+        appTitle.className = "text-2xl font-extrabold tracking-tight text-slate-900 mt-1";
+        subTitle.className = "text-xs text-slate-500 mt-1";
+        labelEmail.className = "block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2";
+        labelPassword.className = "block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2";
+        
+        loginInput.className = "w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-slate-900 placeholder-slate-400";
+        passwordInput.className = "w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-slate-900 placeholder-slate-400";
+        registerPrompt.className = "mt-6 text-center text-sm text-slate-500 relative z-10";
+
+        cancelAnimationFrame(animationId);
+        themeIcon.setAttribute('data-lucide', 'moon');
+      }
+      lucide.createIcons();
+    }
+
+    // 2-Way Theme Toggle
+    function toggleTheme() {
+      const currentTheme = localStorage.getItem('theme') || 'light';
+      if (currentTheme === 'light') {
+        localStorage.setItem('theme', 'universe');
+        applyTheme('universe');
+      } else {
+        localStorage.setItem('theme', 'light');
+        applyTheme('light');
+      }
+    }
+
+    // Function for Show/Hide Password
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById('password');
+      const toggleIcon = document.getElementById('togglePasswordIcon');
+
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        passwordInput.type = 'password';
+        toggleIcon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+
+    // Load initial theme preference
+    document.addEventListener("DOMContentLoaded", () => {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      applyTheme(savedTheme);
+    });
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCpqbqUXrxADXC5xptI91dCy3H8PlZo7u8",
+      authDomain: "gradingsystem-6fbdb.firebaseapp.com",
+      databaseURL: "https://gradingsystem-6fbdb-default-rtdb.firebaseio.com",
+      projectId: "gradingsystem-6fbdb",
+      storageBucket: "gradingsystem-6fbdb.firebasestorage.app",
+      messagingSenderId: "919646538223",
+      appId: "1:919646538223:web:0e427c6ecbf1d7500cce1a",
+      measurementId: "G-H8DCQTXKXW"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const rtdb = firebase.database();
+
+    let pendingUserUid = null;
+    let pendingUserRole = null;
+    let generatedOtp = '';
+    let targetEmail = '';
+    let resendTimer = null;
+
+    const EMAILJS_SERVICE_ID = 'service_zj8esh2';
+    const EMAILJS_TEMPLATE_ID = 'template_5w0lgx4';
+    const RESEND_COOLDOWN_SEC = 60;
+
+    function resetBtn() {
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<span>Sign In</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+      lucide.createIcons();
+    }
+
+    // Gumawa ng bagong 6-digit OTP at ipadala sa email (ginagamit sa unang send at sa resend)
+    function sendOtpEmail() {
+      const arr = new Uint32Array(1);
+      crypto.getRandomValues(arr);
+      generatedOtp = String(100000 + (arr[0] % 900000));
+
+      return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        passcode: generatedOtp,
+        email: targetEmail
+      });
+    }
+
+    // 60-second cooldown para sa Resend button
+    function startResendCooldown() {
+      const btn = document.getElementById('resendBtn');
+      let remaining = RESEND_COOLDOWN_SEC;
+      clearInterval(resendTimer);
+      btn.disabled = true;
+      btn.textContent = `Resend code (${remaining}s)`;
+      resendTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(resendTimer);
+          btn.disabled = false;
+          btn.textContent = 'Resend code';
+        } else {
+          btn.textContent = `Resend code (${remaining}s)`;
+        }
+      }, 1000);
+    }
+
+    async function resendLoginOtp() {
+      if (!pendingUserUid) return;
+
+      const btn = document.getElementById('resendBtn');
+      const warn = document.getElementById('attemptWarning');
+
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+
+      try {
+        await sendOtpEmail();
+        document.getElementById('otpInput').value = '';
+        warn.className = 'text-xs text-emerald-500 mt-2 font-medium text-center min-h-[16px]';
+        warn.textContent = 'A new code has been sent to your email.';
+        startResendCooldown();
+      } catch (err) {
+        warn.className = 'text-xs text-rose-500 mt-2 font-medium text-center min-h-[16px]';
+        warn.textContent = 'Failed to send code: ' + (err.text || err.message || 'Unknown error');
+        btn.disabled = false;
+        btn.textContent = 'Resend code';
+      }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const input = document.getElementById('loginInput').value.trim();
+      const password = document.getElementById('password').value;
+      const submitBtn = document.getElementById('submitBtn');
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Authenticating...`;
+      lucide.createIcons();
+
+      let email = input;
+
+      if (!input.includes('@')) {
+        try {
+          const snapshot = await db.collection('users').where('studentId', '==', input).get();
+          if (snapshot.empty) {
+            alert('No record found matching this LRN / Student ID.');
+            resetBtn();
+            return;
+          }
+          email = snapshot.docs[0].data().email;
+        } catch (err) {
+          alert('System error: ' + err.message);
+          resetBtn();
+          return;
+        }
+      }
+
+      targetEmail = email;
+
+      try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const uid = userCredential.user.uid;
+
+        const userDocRef = db.collection('users').doc(uid);
+        const userDoc = await userDocRef.get();
+        
+        if (!userDoc.exists) {
+          alert('User profile record does not exist.');
+          resetBtn();
+          return;
+        }
+
+        const userData = userDoc.data();
+
+        if (userData.isBlocked) {
+          await auth.signOut();
+          alert('Your account has been locked due to security restrictions or multiple failed attempts. Please contact the administrator to unblock your account.');
+          resetBtn();
+          return;
+        }
+
+        pendingUserUid = uid;
+        pendingUserRole = userData.role;
+        
+        await userDocRef.set({ otpAttempts: userData.otpAttempts || 0 }, { merge: true });
+
+        submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Sending OTP...`;
+        lucide.createIcons();
+
+        sendOtpEmail()
+            .then(function(response) {
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('otpForm').classList.remove('hidden');
+                document.getElementById('subTitle').textContent = 'Two-Factor Authentication';
+                document.getElementById('otpDisplayEmail').textContent = `Sent to: ${targetEmail}`;
+                document.getElementById('otpInput').value = '';
+                document.getElementById('attemptWarning').textContent = '';
+                startResendCooldown();
+                lucide.createIcons();
+            }, function(error) {
+                alert('Failed to send OTP email: ' + JSON.stringify(error));
+                resetBtn();
+            });
+
+      } catch (err) {
+        alert('Invalid credentials: ' + err.message);
+        resetBtn();
+      }
+    });
+
+    document.getElementById('otpForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const warn = document.getElementById('attemptWarning');
+      warn.className = 'text-xs text-rose-500 mt-2 font-medium text-center min-h-[16px]';
+
+      const enteredOtp = document.getElementById('otpInput').value.trim();
+      const userDocRef = db.collection('users').doc(pendingUserUid);
+      const userDoc = await userDocRef.get();
+      const userData = userDoc.data();
+      const currentAttempts = userData.otpAttempts || 0;
+
+      if (enteredOtp === generatedOtp) {
+        clearInterval(resendTimer);
+        await userDocRef.update({ otpAttempts: 0 });
+
+        const userStatusRef = rtdb.ref('/users/' + pendingUserUid + '/status');
+        userStatusRef.set('Online');
+        userStatusRef.onDisconnect().set('Offline');
+
+        if (pendingUserRole === 'admin') window.location.href = 'admin.html';
+        else if (pendingUserRole === 'teacher') window.location.href = 'teacher.html';
+        else window.location.href = 'student.html';
+      } else {
+        const newAttempts = currentAttempts + 1;
+        if (newAttempts >= 3) {
+          clearInterval(resendTimer);
+          await userDocRef.update({ isBlocked: true, otpAttempts: newAttempts });
+          await auth.signOut();
+
+          document.getElementById('otpForm').classList.add('hidden');
+          document.getElementById('loginForm').classList.remove('hidden');
+          document.getElementById('loginInput').value = '';
+          document.getElementById('password').value = '';
+          document.getElementById('otpInput').value = '';
+          document.getElementById('attemptWarning').textContent = '';
+          document.getElementById('subTitle').textContent = 'Sign in to access your dashboard';
+          resetBtn();
+
+          alert('You have reached the maximum of 3 attempts. Your account has been automatically blocked. Please contact the admin to unblock it.');
+        } else {
+          await userDocRef.update({ otpAttempts: newAttempts });
+          warn.textContent = `Incorrect OTP. Attempt ${newAttempts} of 3.`;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PR2 Grading System - Teacher Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 font-sans antialiased flex flex-col transition-colors duration-300">
+
+  <!-- Top Navbar -->
+  <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50 transition-all">
+    <div class="flex items-center space-x-3">
+      <div class="p-2 bg-blue-500/10 dark:bg-blue-600/20 border border-blue-500/30 rounded-xl">
+        <i data-lucide="book-open" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+      </div>
+      <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">Faculty Control Center</h1>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <!-- Dark/Light Mode Toggle Button -->
+      <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition transform active:scale-95 shadow-sm" title="Toggle Theme">
+        <i data-lucide="moon" class="w-4 h-4 hidden dark:block"></i>
+        <i data-lucide="sun" class="w-4 h-4 block dark:hidden text-amber-500"></i>
+      </button>
+
+      <button onclick="logout()" class="flex items-center gap-2 bg-rose-600/10 hover:bg-rose-600/20 border border-rose-500/30 text-rose-600 dark:text-rose-300 px-4 py-2 rounded-xl text-sm font-semibold transition transform active:scale-95 shadow-sm">
+        <i data-lucide="log-out" class="w-4 h-4"></i> Log Out
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Layout with Sidebar on Left -->
+  <div class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-6 gap-6">
+    
+    <!-- Left Sidebar Navigation -->
+    <aside class="w-full md:w-80 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 backdrop-blur-xl shadow-xl dark:shadow-2xl flex flex-col justify-between h-fit transition-colors">
+      <div>
+        <div class="mb-6 px-3">
+          <h2 id="teacherNameDisplay" class="text-base font-bold text-slate-900 dark:text-slate-100">Welcome Back, Instructor!</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Select a workspace module</p>
+        </div>
+
+        <nav class="space-y-2">
+          <!-- Encode Grades Link -->
+          <a href="encode.html" class="flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-blue-600/10 hover:border-blue-500/30 hover:text-blue-600 dark:hover:text-blue-300 transition group">
+            <div class="flex items-center gap-3">
+              <i data-lucide="pen-tool" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+              <span>Encode Grades</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50 group-hover:translate-x-0.5 transition"></i>
+          </a>
+
+          <!-- Update Grades Link -->
+          <a href="update.html" class="flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-amber-600/10 hover:border-amber-500/30 hover:text-amber-600 dark:hover:text-amber-300 transition group">
+            <div class="flex items-center gap-3">
+              <i data-lucide="edit-3" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>
+              <span>Update Grades</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50 group-hover:translate-x-0.5 transition"></i>
+          </a>
+
+          <!-- Student Directory Link -->
+          <a href="students.html" class="flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-emerald-600/10 hover:border-emerald-500/30 hover:text-emerald-600 dark:hover:text-emerald-300 transition group">
+            <div class="flex items-center gap-3">
+              <i data-lucide="users" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
+              <span>Student Directory</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50 group-hover:translate-x-0.5 transition"></i>
+          </a>
+
+          <!-- Master Gradebook Link -->
+          <a href="gradebook.html" class="flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-purple-600/10 hover:border-purple-500/30 hover:text-purple-600 dark:hover:text-purple-300 transition group">
+            <div class="flex items-center gap-3">
+              <i data-lucide="file-spreadsheet" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+              <span>Master Gradebook</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 opacity-50 group-hover:translate-x-0.5 transition"></i>
+          </a>
+        </nav>
+      </div>
+
+      <div class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 text-center">
+        Grading System 
+      </div>
+    </aside>
+
+    <!-- Right Content Area -->
+    <main class="flex-1 bg-white/70 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 backdrop-blur-xl shadow-xl dark:shadow-2xl flex flex-col justify-center items-center text-center animate__animated animate__fadeIn transition-colors">
+      <div class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl mb-4 text-blue-600 dark:text-blue-400">
+        <i data-lucide="layout-dashboard" class="w-12 h-12"></i>
+      </div>
+      <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">Faculty Dashboard</h3>
+      <p class="text-slate-500 dark:text-slate-400 text-sm max-w-md mb-6">Select an option from the menu to begin.</p>
+    </main>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Theme Toggle Functionality
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      if (htmlEl.classList.contains('dark')) {
+        htmlEl.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        htmlEl.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    // Load saved theme preference
+    if (localStorage.getItem('theme') === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCpqbqUXrxADXC5xptI91dCy3H8PlZo7u8",
+      authDomain: "gradingsystem-6fbdb.firebaseapp.com",
+      databaseURL: "https://gradingsystem-6fbdb-default-rtdb.firebaseio.com",
+      projectId: "gradingsystem-6fbdb",
+      storageBucket: "gradingsystem-6fbdb.firebasestorage.app",
+      messagingSenderId: "919646538223",
+      appId: "1:919646538223:web:0e427c6ecbf1d7500cce1a",
+      measurementId: "G-H8DCQTXKXW"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const rtdb = firebase.database();
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // --- KUNIN ANG PANGALAN NG GURO MULA SA FIRESTORE ---
+      db.collection('users').doc(user.uid).get().then(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          const nameEl = document.getElementById('teacherNameDisplay');
+          if (nameEl) {
+            nameEl.textContent = `Welcome Back, ${data.fullName || 'Instructor'}!`;
+          }
+        }
+      }).catch(error => {
+        console.error("Error fetching teacher data:", error);
+      });
+
+      // --- REALTIME ONLINE STATUS TRACKING ---
+      const userStatusRef = rtdb.ref('/users/' + user.uid + '/status');
+      rtdb.ref('.info/connected').on('value', (snapshot) => {
+        if (snapshot.val() === false) return;
+        userStatusRef.onDisconnect().set('Offline').then(() => {
+          userStatusRef.set('Online');
+        });
+      });
+    });
+
+    function logout() {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        rtdb.ref('/users/' + currentUser.uid + '/status').set('Offline').finally(() => {
+          window.location.href = 'index.html';
+        });
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+  </script>
+</body>
+</html>
